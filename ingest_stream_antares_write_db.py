@@ -51,10 +51,9 @@ import sys
 #import astropy.coordinates as coord
 
 
-#from astropy.coordinates import SkyCoord
-#from astropy import units as u
+from astropy.coordinates import SkyCoord
 
-#import astropy.units as units
+import astropy.units as u
 
 
 #import csv
@@ -77,19 +76,33 @@ from antares_client import StreamingClient
 import datetime
 #from antares_client.search import get_by_id, get_by_ztf_object_id
 
-	
+
 	
 def main():
+	
+	PS1_final_RRLyr_candidates_RRab = np.genfromtxt('catalogs/PS1_final_RRLyr_candidates.csv', \
+	names = 'ra,dec,objid',
+	usecols = (0,1,8), \
+	dtype = 'f8, f8, |U20', skip_header=1, delimiter=',')
+
+	PS1_RRL_catalog = SkyCoord(ra=PS1_final_RRLyr_candidates_RRab['ra']*u.degree, dec=PS1_final_RRLyr_candidates_RRab['dec']*u.degree)
+	print('PS1 loaded')
 	
 	
 	"""
 	Use this script as a starting point for streaming alerts from ANTARES.
 	"""
-	API_KEY =  
-	API_SECRET =  
+	keyFile = open('keys.txt', 'r')
+	API_KEY = keyFile.readline().rstrip()
+	API_SECRET = keyFile.readline().rstrip()
+
+	#consumer_secret = keyFile.readline().rstrip()
+	#API_SECRET = keyFile.readline().rstrip()
+	keyFile.close()
 
 
-
+	print(API_KEY)
+	print(API_SECRET)
 
 	#TOPICS = ["extragalactic_staging", "nuclear_transient_staging"]
 	#CONFIG = {
@@ -131,10 +144,23 @@ def main():
 	f = open('logfiles/%s__stream.log' % (topic), "a+")
 
 
-	dbconn = sqlite3.connect('ztf_alerts_stream.db', isolation_level=None)	
+
+
+
+	current_dirs_parent = os.path.dirname(os.getcwd())
+	db_path = current_dirs_parent + '/_broker_db/ztf_alerts_stream.db'
+		
+	dbconn = sqlite3.connect(db_path, isolation_level=None)	
+	
+	
+	
 	dbconn.execute('pragma journal_mode=wal;')
 
 	c = dbconn.cursor()
+	
+	c_2 = dbconn.cursor()	
+	
+	c_3 = dbconn.cursor()
 
 	#### make a loop and keep it running
 	while True:
@@ -277,9 +303,225 @@ def main():
 					ant_mag_corrected, ant_passband) )
 									
 									
-									
 					dbconn.commit()							
-					print('done write DB')	
+					print('done write alert to DB')	
+					
+					
+				
+					# cross-match
+					
+					
+					
+					# check if already cross-matched
+					
+					c_3.execute('SELECT count(*) from crossmatches where locus_id = ?', (locus_id,))
+					
+					
+					already_crossmatched=c_3.fetchone()[0]
+					print('already_crossmatched: ', already_crossmatched)
+					
+					if(already_crossmatched==0):
+					
+						
+						#if not cross-matched:
+
+						matches = locus.catalog_objects
+
+					
+						for catalog_match in matches:
+							
+							print(catalog_match)    #this fills column "Catalog"
+					
+							match catalog_match:
+								
+								case "allwise":
+									object_match = matches['allwise'][0]['designation']
+									ra_match = matches['allwise'][0]['ra']
+									dec_match = matches['allwise'][0]['decl']  
+									
+								case "csdr2":        
+									object_match = matches['csdr2'][0]['name']
+									ra_match = matches['csdr2'][0]['ra']
+									dec_match = matches['csdr2'][0]['decl']
+									
+								case "vsx":        
+									object_match = matches['vsx'][0]['name']
+									ra_match = matches['vsx'][0]['raj2000']
+									dec_match = matches['vsx'][0]['dej2000']  
+									
+								case "gaia_dr3_variability":        
+									object_match = matches['gaia_dr3_variability'][0]['source']
+									ra_match = matches['gaia_dr3_variability'][0]['ra_icrs']
+									dec_match = matches['gaia_dr3_variability'][0]['de_icrs']  
+									
+								case "gaia_dr3_gaia_source":        
+									object_match = matches['gaia_dr3_gaia_source'][0]['designation']
+									ra_match = matches['gaia_dr3_gaia_source'][0]['ra']
+									dec_match = matches['gaia_dr3_gaia_source'][0]['dec']           
+								
+								case "bright_guide_star_cat":   
+									object_match = matches['bright_guide_star_cat'][0]['hstID']
+									ra_match = matches['bright_guide_star_cat'][0]['RightAsc_deg']
+									dec_match = matches['bright_guide_star_cat'][0]['Declination_deg']           
+									
+								case "asassn_variable_catalog_v2_20190802":        
+									object_match = matches['asassn_variable_catalog_v2_20190802'][0]['asassn_name']
+									ra_match = matches['asassn_variable_catalog_v2_20190802'][0]['raj2000']
+									dec_match = matches['asassn_variable_catalog_v2_20190802'][0]['dej2000']                 
+									
+								case "2mass_psc":        
+									object_match = matches['2mass_psc'][0]['designation']
+									ra_match = matches['2mass_psc'][0]['ra']
+									dec_match = matches['2mass_psc'][0]['decl']   
+									
+								case "linear_ll":        
+									object_match = matches['linear_ll'][0]['linear']
+									ra_match = matches['linear_ll'][0]['raj2000']
+									dec_match = matches['linear_ll'][0]['dej2000']   
+									
+								case "sdss_stars":        
+									object_match = matches['sdss_stars'][0]['Objid']
+									ra_match = matches['sdss_stars'][0]['ra']
+									dec_match = matches['sdss_stars'][0]['dec_']   
+									
+								case "gaia_edr3_distances_bailer_jones":        
+									object_match = matches['gaia_edr3_distances_bailer_jones'][0]['source']
+									ra_match = matches['gaia_edr3_distances_bailer_jones'][0]['ra_icrs']
+									dec_match = matches['gaia_edr3_distances_bailer_jones'][0]['de_icrs']   
+									
+								case "sdss_gals":        
+									object_match = matches['sdss_gals'][0]['Objid']
+									ra_match = matches['sdss_gals'][0]['ra']
+									dec_match = matches['sdss_gals'][0]['dec_']   
+									
+								case "milliquas":        
+									object_match = matches['milliquas'][0]['rname']
+									ra_match = matches['milliquas'][0]['ra']
+									dec_match = matches['milliquas'][0]['dec']     
+									
+								case "tns_public_objects":        
+									object_match = matches['tns_public_objects'][0]['name']
+									ra_match = matches['tns_public_objects'][0]['ra']
+									dec_match = matches['tns_public_objects'][0]['declination']               
+									
+								case "sdss_dr7":        
+									object_match = matches['sdss_dr7'][0]['objid']
+									ra_match = matches['sdss_dr7'][0]['raj2000']
+									dec_match = matches['sdss_dr7'][0]['dej2000']               
+									
+								case "galex":        
+									object_match = matches['galex'][0]['OBJID']
+									ra_match = matches['galex'][0]['AVASPRA']
+									dec_match = matches['galex'][0]['AVASPDEC']
+									
+								case "ned":        
+									object_match = matches['ned'][0]['Object_Name']
+									ra_match = matches['ned'][0]['RA_deg']
+									dec_match = matches['ned'][0]['DEC_deg']     
+									
+								case "veron_agn_qso":        
+									object_match = matches['veron_agn_qso'][0]['Name']
+									ra_match = matches['veron_agn_qso'][0]['viz_RAJ2000']
+									dec_match = matches['veron_agn_qso'][0]['viz_DEJ2000']           
+									
+								case "nyu_valueadded_gals":        
+									object_match = matches['nyu_valueadded_gals'][0]['IND']
+									ra_match = matches['nyu_valueadded_gals'][0]['RA']
+									dec_match = matches['nyu_valueadded_gals'][0]['DEC']               
+									
+								case "RC3":        
+									object_match = matches['RC3'][0]['name']
+									ra_match = matches['RC3'][0]['ra']
+									dec_match = matches['RC3'][0]['dec']                     
+									
+								case "veron_agn_qso":        
+									object_match = matches['veron_agn_qso'][0]['Name']
+									ra_match = matches['veron_agn_qso'][0]['viz_RAJ2000']
+									dec_match = matches['veron_agn_qso'][0]['viz_DEJ2000']               
+									
+								case "xmm3_dr8":        
+									object_match = matches['xmm3_dr8'][0]['iauname']
+									ra_match = matches['xmm3_dr8'][0]['ra']
+									dec_match = matches['xmm3_dr8'][0]['dec']               
+									
+								case "chandra_master_sources":        
+									object_match = matches['chandra_master_sources'][0]['name']
+									ra_match = matches['chandra_master_sources'][0]['ra']
+									dec_match = matches['chandra_master_sources'][0]['dec']     
+									
+								case "vii_274_bzcat5":        
+									object_match = matches['vii_274_bzcat5'][0]['name']
+									ra_match = matches['vii_274_bzcat5'][0]['raj2000']
+									dec_match = matches['vii_274_bzcat5'][0]['dej2000']     
+									
+								case _:	# matched to a catalog not in this list
+									object_match = ''
+									ra_match = np.nan
+									dec_match = np.nan
+									
+							print('object_match ', object_match)
+							print('ra_match ', ra_match)
+							print('dec_match ', dec_match)
+
+							coord1 = SkyCoord(ra=locus.ra*u.deg, dec=locus.dec*u.deg, frame='icrs') # this is from the object in the broker
+							print('coord1')
+							print(coord1)
+
+							coord2 = SkyCoord(ra=ra_match*u.deg, dec=dec_match*u.deg, frame='icrs') # this is from the matched one
+
+							print('coord2')
+							print(coord2)
+
+							separation_match = (coord1.separation(coord2)).arcsecond
+							
+							print(separation_match)
+							
+							#print(locus_id)
+							#print(catalog_match)
+							
+								
+							c_2.execute("insert into crossmatches(locus_id, catalog, object, ra_cat, dec_cat, separation) values (?, ?, ?, ?, ?, ?)",(locus_id, catalog_match, object_match, ra_match, dec_match, separation_match) )
+								
+							dbconn.commit()
+								
+								
+						# cross-match with PS1_RRL_catalog
+						
+						coord1 = SkyCoord(ra=locus.ra*u.degree, dec=locus.dec*u.degree)
+						
+						idx, d2d, d3d = coord1.match_to_catalog_sky(PS1_RRL_catalog)
+						
+						
+
+						## keep if id d2d < 1.5 arcsec
+						if(d2d < 1.5*u.arcsec):
+							#print('PS1_RRL_catalog match')
+							##print (idx,d2d,d3d)
+							#print (PS1_final_RRLyr_candidates_RRab[idx])
+							
+							ps1_ra = PS1_final_RRLyr_candidates_RRab[idx][0]
+							ps1_dec = PS1_final_RRLyr_candidates_RRab[idx][1]
+							ps1_objid = PS1_final_RRLyr_candidates_RRab[idx][2]
+							print(ps1_ra,ps1_dec,ps1_objid)
+							# insert the cross-match into table if no PS1 cross-match exists for this object
+							#table is crossmatches with columns locus_id, ps1_ra, ps1_dec, ps1_objid
+							
+							#print('attempt write DB')
+							#### write external classification information to database
+							coord2 = SkyCoord(ra=ps1_ra*u.deg, dec=ps1_dec*u.deg, frame='icrs') # this is from the matched one
+
+							separation_match = coord1.separation(coord2)
+							c_2.execute("insert into crossmatches(locus_id, catalog, object, ra_cat, dec_cat, separation) values (?, ?, ?, ?, ?, ?)",(locus_id, 'PS1_RRL', ps1_objid, ps1_ra, ps1_dec, separation_match) )
+							
+							
+							dbconn.commit()
+							
+						print('done write cross-matches to DB')	
+
+					
+					
+					
+					
 					
 					print('------')	
 
