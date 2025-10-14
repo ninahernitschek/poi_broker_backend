@@ -147,8 +147,8 @@ def main():
 
 
 
-	current_dirs_parent = os.path.dirname(os.getcwd())
-	db_path = current_dirs_parent + '/_broker_db/ztf_alerts_stream.db'
+	#current_dirs_parent = os.path.dirname(os.getcwd())
+	#db_path = current_dirs_parent + '/_broker_db/ztf_alerts_stream.db'
 		
 	# dbconn = sqlite3.connect(db_path, isolation_level=None)	
 	
