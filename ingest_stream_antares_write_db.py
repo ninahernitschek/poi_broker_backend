@@ -1,3 +1,5 @@
+#
+#
 #from ingest import do_ingest
 #from ztf import db, logger
 import sys
@@ -116,7 +118,7 @@ def main():
 		topics=["high_amplitude_variable_star_candidate_staging"],
 		api_key=API_KEY,
 		api_secret=API_SECRET,
-		group="Hernitschek"
+		group="HernitschekN"
 		)
 	
 
@@ -167,7 +169,8 @@ def main():
 	
 		print('try connecting ', datetime.datetime.now())
 		f.write('try connecting ' + str( datetime.datetime.now()))
-				
+		print ( client.iter())
+		
 		try:
 				for topic, locus in client.iter():
 					
