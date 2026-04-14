@@ -1,4 +1,4 @@
-#
+#PARALLEL
 #
 #from ingest import do_ingest
 #from ztf import db, logger
@@ -90,10 +90,6 @@ from astropy.coordinates import SkyCoord
 
 
 
-
-import pandas as pd
-
-
 import timeit
 
 from multiprocessing import Pool
@@ -119,10 +115,13 @@ from scipy.optimize import minimize, minimize_scalar
 import csv
 
 
-
 from sklearn.ensemble import GradientBoostingClassifier
 
 from xgboost import XGBClassifier
+
+
+
+from multiprocessing import Pool
 
 
 # (quasi-)periodic:
@@ -157,16 +156,15 @@ from sklearn.preprocessing import StandardScaler
 
 def classify(alert_id):
 
-	print('in classify')
+	#print('in classify')
 	model_filename = 'xgboost_model.pickle'
 	trained_classifier = pickle.load(open(model_filename,'rb'))
-	print('model loaded')
+	#print('model loaded')
 
 	current_dirs_parent = os.path.dirname(os.getcwd())
 	db_path = current_dirs_parent + '/_broker_db/ztf_alerts_stream.db'
 		
 	dbconn = sqlite3.connect(db_path, isolation_level=None)	
-
 	
 	c_2 = dbconn.cursor()
 	
@@ -230,11 +228,11 @@ def classify(alert_id):
 	#		print(f"Processing a new chunk with {len(chunk_featuretable)} rows")
 
 
-	print('classify A')
+	#print('classify A')
 	chunk_featuretable = pd.read_sql(sql_query, dbconn)
-	print(pd.read_sql(sql_query, dbconn))
-	print('chunk_featuretable')
-	print(chunk_featuretable)
+	#print(pd.read_sql(sql_query, dbconn))
+	#print('chunk_featuretable')
+	#print(chunk_featuretable)
 
 	# Read the SQL query results into a pandas DataFrame
 	# This function eliminates the need for a separate cursor object and fetchall() call
@@ -257,12 +255,12 @@ def classify(alert_id):
 
 	chunk_featuretable = chunk_featuretable.replace(['Pass', 'Fail'],[0, 1])
 			
-			#print(chunk_featuretable)
 
-			# #Splitting the data into independent and dependent variables
+
+	# #Splitting the data into independent and dependent variables
 	X = chunk_featuretable.values
 				
-			#print(X)
+
 			
 	scaler = StandardScaler()
 			
@@ -271,19 +269,57 @@ def classify(alert_id):
 	predicted_labels = trained_classifier.predict(X)
 			
 	p_class = trained_classifier.predict_proba(X)
-	print('p_class')
-	print(p_class)
+	prob_class_idx =  np.argmax(p_class[0])
+	
+# 	print('********** test classification*******')
+# 	
+# 	print('p_class')
+# 	print(p_class)
+# 	print('max(p_class[0])')
+# 	print(max(p_class[0]))
+# 	
+# 	
+# 	#the label of the most probable class
+# 	print('prob_class_idx')
+	
+	#print(p_class[0])
+	#print(prob_class_idx)
+	
+	
+	
+	#prob_class
+	
+		
+	match prob_class_idx:
+		case 0:
+			prob_class="cvnova"
+		case 1:
+			prob_class="e"
+		case 2:
+			prob_class="lpv"
+		case 3:
+			prob_class="puls"
+		case 4:
+			prob_class="periodic_other"
+		case 5:
+			prob_class="quas"
+		case 6:
+			prob_class="sn"
+		case 7:
+			prob_class="yso"		
+	
+	#print(prob_class)
+	
+	
 
-
-
-	print('write classification to db')
+	#print('write classification to db')
 	try:	
-		c_2.execute("insert or ignore into classification(alert_id,p_cvnova,p_e, p_lpv, p_puls, p_periodic_other, p_quas, p_sn , p_yso) values (?, ?, ?, ?, ?, ?, ?, ?, ?)",(alertinfo['alert_id'][0],float(p_class[0][0]),float(p_class[0][1]),float(p_class[0][2]),float(p_class[0][3]),float(p_class[0][4]),float(p_class[0][5]),float(p_class[0][6]),float(p_class[0][7])))
+		c_2.execute("insert or ignore into classification(alert_id,p_cvnova,p_e, p_lpv, p_puls, p_periodic_other, p_quas, p_sn , p_yso,prob_class) values (?, ?, ?, ?, ?, ?, ?, ?, ?,?)",(alertinfo['alert_id'][0],float(p_class[0][0]),float(p_class[0][1]),float(p_class[0][2]),float(p_class[0][3]),float(p_class[0][4]),float(p_class[0][5]),float(p_class[0][6]),float(p_class[0][7]),prob_class))
 		
 	except:
-		print('error when writing classification to db')
+		print("%s : error when writing classification to db" % (alert_id))
 
-	print('classification written to db')
+	#print('classification written to db')
 			
 		
 		
@@ -307,7 +343,7 @@ def calculate_features_one_lc(param):
 					
 			#####print(locus.lightcurve)
 
-	print('calculating features for ', locus_id)
+	#print('calculating features for ', locus_id)
 	lightcurve = locus.lightcurve.dropna()
 		
 	mhps_ratio = {'g': np.NaN, 'R': np.NaN, 'i': np.NaN}
@@ -383,8 +419,6 @@ def calculate_features_one_lc(param):
 			
 	if(len(lightcurve) > 10):
 
-				
-				
 	
 				#lightcurve=lightcurve.drop(['time', 'alert_id', 'ant_survey', 'ant_ra', 'ant_dec', 'ant_mag',
 				#'ant_magerr', 'ant_maglim', 'ant_magulim_corrected', 'ant_magllim_corrected'], axis=1)
@@ -458,7 +492,7 @@ def calculate_features_one_lc(param):
 				freq, per = my_per.get_periodogram()
 				fbest, pbest = my_per.get_best_frequencies() # Return best n_local_optima frequencies
 
-								#best frequency
+				#best frequency
 								
 				best_freq = fbest[0]
 				#print('fbest (best frequency)')
@@ -1302,124 +1336,54 @@ def calculate_features_one_lc(param):
 						harmonics_mse['R'], harmonics_mse['i'], harmonics_chi_per_degree['g'], harmonics_chi_per_degree['R'], 
 						harmonics_chi_per_degree['i'], locus_id,writeflag]
 	
-	
-	
-				
 	return features
 
 
-	
-def main():
-	
-	
-	
-	bands = ['g','R','i']
-	
-	
-	PS1_final_RRLyr_candidates_RRab = np.genfromtxt('catalogs/PS1_final_RRLyr_candidates.csv', \
-	names = 'ra,dec,objid',
-	usecols = (0,1,8), \
-	dtype = 'f8, f8, |U20', skip_header=1, delimiter=',')
-
-	PS1_RRL_catalog = SkyCoord(ra=PS1_final_RRLyr_candidates_RRab['ra']*u.degree, dec=PS1_final_RRLyr_candidates_RRab['dec']*u.degree)
-	print('PS1 loaded')
-	
-	
-	"""
-	Use this script as a starting point for streaming alerts from ANTARES.
-	"""
-	keyFile = open('keys.txt', 'r')
-	API_KEY = keyFile.readline().rstrip()
-	API_SECRET = keyFile.readline().rstrip()
-
-	#consumer_secret = keyFile.readline().rstrip()
-	#API_SECRET = keyFile.readline().rstrip()
-	keyFile.close()
-
-
-	print(API_KEY)
-	print(API_SECRET)
-
-	#TOPICS = ["extragalactic_staging", "nuclear_transient_staging"]
-	#CONFIG = {
-	#"api_key": API_KEY,
-	#"api_secret": API_SECRET,
-	#}
 
 
 
-	client = StreamingClient(
-		topics=["high_amplitude_variable_star_candidate_staging"],
-		api_key=API_KEY,
-		api_secret=API_SECRET,
-		group="HernitschekNi"
-		)
-	
+def process_single_alert(param):
 
-	#The poll method can be used to retrieve an alert. It returns a (topic, locus) tuple where topic is a string 
-	#(in this example either "extragalactic_staging" or "nuclear_transient_staging") and locus is a Locus instance 
-	#that contains the history of observations at the alert site. By default, this method will block indefinitely,
-	#waiting for an alert. If you pass an argument to the timeout keyword, the method will return (None, None) 
-	#after timeout seconds have elapsed:
-
-	topic = 'high_amplitude_variable_star_candidate_staging'
-	datetimenow = datetime.now()
-	print(datetimenow)
-
-
-## TODO: Add logging
-	# disables logging from GPy.py unless they are at least WARNING
-
-		#logging.getLogger("GP").setLevel(logging.WARNING)
-
-		#logging.basicConfig(filename='logfiles/%s_%s__stream.log' % (datetimenow,topic),format='%(asctime)s %(message)s',
-						#level=logging.INFO)
-		#logging.info('start processing alert archive')
-
-
-	f = open('logfiles/%s__stream.log' % (topic), "a+")
-
-
-
-
-
-	current_dirs_parent = os.path.dirname(os.getcwd())
-	db_path = current_dirs_parent + '/_broker_db/ztf_alerts_stream.db'
-		
-	dbconn = sqlite3.connect(db_path, isolation_level=None)	
-	
-	
-	
-	dbconn.execute('pragma journal_mode=wal;')
-
-	c = dbconn.cursor()
-	
-	c_2 = dbconn.cursor()	
-	
-	c_3 = dbconn.cursor()
-
-	#### make a loop and keep it running
-	while True:
-	
-		print('try connecting ', datetime.now())
-		f.write('try connecting ' + str( datetime.now()))
-		print ( client.iter())
-		
-		try:
-				for topic, locus in client.iter():
+					#print('process_single_alert')
+					#print(topic)
+					#print(locus)
 					
-					print('topic ', topic)
-					print('locus ', locus)
+					i, locus = param
+					
+					locus_id = locus.locus_id
+					#print(locus_id)
+					
+					current_dirs_parent = os.path.dirname(os.getcwd())
+					db_path = current_dirs_parent + '/_broker_db/ztf_alerts_stream.db'
+
+					#print(db_path)
+					#print('attempt connect db')
+					dbconn = sqlite3.connect(db_path, isolation_level=None)	
+					
+					#print('db connected')
+					
+					dbconn.execute('pragma journal_mode=wal;')
+
+					c = dbconn.cursor()
+					
+					c_2 = dbconn.cursor()	
+					
+					c_3 = dbconn.cursor()
+					
+					
+					#print('topic ', topic)
+					#print('locus ', locus)
 					logdate = datetime.now()
 
-					print("{} received {} on {}".format(logdate,locus, topic))
 					locus_id = locus.locus_id
-					print('locus_id: ', locus_id)
+					#print(locus_id)
+									
 					jdate = locus.alerts[-1].mjd+2400000.5
 						
 					t = Time(jdate, format='jd')
 					
 					alert_id = locus.alerts[-1].alert_id
+					#print("{} received {}, {}".format(logdate,alert_id,locus_id))
 							
 					
 				
@@ -1429,69 +1393,12 @@ def main():
 					ant_mag_corrected=locus.lightcurve.ant_mag_corrected[j]
 					ant_passband=locus.lightcurve.ant_passband[j]
 					
-					
-					print("date: {} {}".format(locus.alerts[-1].mjd, t.isot))
-						# MJD field is the time of observation, which is in UTC
-						
-				
-					#logging.info("timestamp %s, locus_id %s " % (datetime.datetime.now(),locus_id))
-				
-					#f.write("timestamp %s, locus_id %s\n" % (datetime.datetime.now(),locus_id))
-					
-					
-					f.write("timestamp %s, locus_id %s, locus.alerts.alert_id %s\n" % (logdate,locus_id,locus.alerts[-1].alert_id))
-					f.flush()
-						
-					
-				
-				
-					# lightcurve:
-					#print('list(locus.lightcurve):')
-					#print(list(locus.lightcurve))
-					
-					#print("locus.lightcurve")
-					#print(locus.lightcurve)
-					
-					#print("locus.lightcurve.time")
-					#print(locus.lightcurve.time)
-					
-					#print("locus.lightcurve.ant_mjd")
-					#print(locus.lightcurve.ant_mjd)
-					#print("locus.lightcurve.ant_mag_corrected")
-					#print(locus.lightcurve.ant_mag_corrected)
-					
-					
-					#print(locus.properties)
-					
-					
-					#print("feature_amplitude_magn_r")
-					#print(locus.properties.get("feature_amplitude_magn_r"))
-					
-					##### STORE THIS:
-					#ime stamp, alert name, locus name, date of alert, locus.properties
-					
-					
-					
-
-		#The magpsf property of an alert sent by ZTF is what is measured from the difference image. In Antares, we compute an 
-		#add-on property called  ant_mag_corrected  that tries to account for the subtracted flux. So, when using Antares, 
-		#if your application involves variable stars you should ideally use ant_mag_corrected.
-		#Updating the documentation to clarify this confusion is in the team's to-do list.
-
-
-		#locus properties (features):
-		#Those particular properties are updated by a filter named IF_anomaly_detection.  
-		#It runs every night. There's not a history for them on the locus.  
-
-
-
-					
-					print('calculate additional features')
+					#print('calculate additional features')
 					features = calculate_features_one_lc(locus_id)
 		#if value does not exist in properties: write NaN 
-					print(features)
+					#print(features)
 
-					print('attempt write DB')
+					#print('write featuretable DB')
 					print(alert_id)
 					
 					### write external classification information to database
@@ -1571,15 +1478,16 @@ def main():
 									
 									
 					dbconn.commit()							
-					print('done write alert to DB')	
+					#print('done write featuretable DB')	
 					
 					
 					
 						
 					# classify
-					print('classify')
+					#print('classify')
 					classify(alert_id)
-					
+					#print('done write classify DB')	
+
 						
 				
 					# cross-match
@@ -1590,13 +1498,13 @@ def main():
 					
 					c_3.execute('SELECT count(*) from crossmatches where locus_id = ?', (locus_id,))
 					
-					
+					#print('crossmatch')
 					already_crossmatched=c_3.fetchone()[0]
-					print('already_crossmatched: ', already_crossmatched)
+					#print('already_crossmatched: ', already_crossmatched)
 					
 					if(already_crossmatched==0):
 					
-						
+						#print('attempt cross-matching')
 						#if not cross-matched:
 
 						matches = locus.catalog_objects
@@ -1604,7 +1512,7 @@ def main():
 					
 						for catalog_match in matches:
 							
-							print(catalog_match)    #this fills column "Catalog"
+							#print(catalog_match)    #this fills column "Catalog"
 					
 							match catalog_match:
 								
@@ -1748,7 +1656,7 @@ def main():
 
 							separation_match = (coord1.separation(coord2)).arcsecond
 							
-							print(separation_match)
+							#print(separation_match)
 							
 							#print(locus_id)
 							#print(catalog_match)
@@ -1790,186 +1698,149 @@ def main():
 							
 							dbconn.commit()
 							
-						print('done write cross-matches to DB')	
+						#print('done write cross-matches to DB')	
+						#print('%s finished' % alert_id)
 
+
+	
+def main():
+
+	print('BROKER BACKEND STARTED')
+	datetimenow = datetime.now()
+	print(datetimenow)
+	
+	
+	bands = ['g','R','i']
+	
+	
+	PS1_final_RRLyr_candidates_RRab = np.genfromtxt('catalogs/PS1_final_RRLyr_candidates.csv', \
+	names = 'ra,dec,objid',
+	usecols = (0,1,8), \
+	dtype = 'f8, f8, |U20', skip_header=1, delimiter=',')
+
+	PS1_RRL_catalog = SkyCoord(ra=PS1_final_RRLyr_candidates_RRab['ra']*u.degree, dec=PS1_final_RRLyr_candidates_RRab['dec']*u.degree)
+	print('PS1 loaded')
+	
+	
+	"""
+	Use this script as a starting point for streaming alerts from ANTARES.
+	"""
+	keyFile = open('keys.txt', 'r')
+	API_KEY = keyFile.readline().rstrip()
+	API_SECRET = keyFile.readline().rstrip()
+
+	#consumer_secret = keyFile.readline().rstrip()
+	#API_SECRET = keyFile.readline().rstrip()
+	keyFile.close()
+
+
+	#print(API_KEY)
+	#print(API_SECRET)
+
+	#TOPICS = ["extragalactic_staging", "nuclear_transient_staging"]
+	#CONFIG = {
+	#"api_key": API_KEY,
+	#"api_secret": API_SECRET,
+	#}
+
+
+
+	client = StreamingClient(
+		topics=["high_amplitude_variable_star_candidate_staging"],
+		api_key=API_KEY,
+		api_secret=API_SECRET,
+		group="HernitschekNina"
+		)
+	
+	#The poll method can be used to retrieve an alert. It returns a (topic, locus) tuple where topic is a string 
+	#(in this example either "extragalactic_staging" or "nuclear_transient_staging") and locus is a Locus instance 
+	#that contains the history of observations at the alert site. By default, this method will block indefinitely,
+	#waiting for an alert. If you pass an argument to the timeout keyword, the method will return (None, None) 
+	#after timeout seconds have elapsed:
+
+	topic = 'high_amplitude_variable_star_candidate_staging'
+	datetimenow = datetime.now()
+	print(datetimenow)
+
+
+## TODO: Add logging
+	# disables logging from GPy.py unless they are at least WARNING
+
+		#logging.getLogger("GP").setLevel(logging.WARNING)
+
+		#logging.basicConfig(filename='logfiles/%s_%s__stream.log' % (datetimenow,topic),format='%(asctime)s %(message)s',
+						#level=logging.INFO)
+		#logging.info('start processing alert archive')
+
+
+	#f = open('logfiles/%s__stream.log' % (topic), "a+")
+
+
+
+
+
+
+	#### make a loop and keep it running
+	while True:
+	
+		print('try connecting ', datetime.now())
+		#f.write('try connecting ' + str( datetime.now()))
+		print ( client.iter())
+		
+		
+
+
+		number_of_processes = 9 #9
+		pool = Pool(processes=number_of_processes)
+		
+		locus_array = []
+		idx=0
+	
+
+		try:
+				for topic, locus in client.iter():
+				
 					
+					locus_array.append(locus)
+			
+			#print(idx, locus_id_array)
+			
+					idx=idx+1
+	
+					if(idx==number_of_processes):  
+			
+						params = [(i, locus) for i, locus in enumerate(locus_array)]
+
+						it = pool.imap_unordered(process_single_alert, params)
+						
+						idx=0
+						locus_array = []
+
+	
+				
+				
+				#	print(topic)
+				#	print(locus)
+				#	locus_id = locus.locus_id
+				#	print(locus_id)
+				#	process_single_alert(locus)
+		
 					
-					
-					
-					
-					print('------')	
+				#	print('------')	
 
 		except:
-			print('an exception has occurred when processing alert')
+			
+			alertid = locus.alerts[-1].alert_id
+			
+			print("%s : an exception has occurred when processing alert" % alertid)
+
 			pass
-
-					
-		#			things I want to store:
-		# alert name, locus name, current features from the locus
-		# features are: 
-		#print(locus.properties)
-
-		# ---> first print, then check writing to my DB
-
-
-		#things I want from their DB:
-		#- RA, Dec
-		#- cross-matches
-		#- light curve: check how long it does go back, do I need to store it for complete lc?
-		# ---> check acessing from their DB, then check whether I get as many as their  num_alerts
-
-
-
-		#next things:
-		#- I store which alerts received in a DB
-		#- I store calculated features to get a history of features
-		#--> then change the frontend website
-		#- cross-matches: when clicked, show all cross-matches, and then you can fold down each to see details (access directly from db)
-		#- I calc my own features
-		#- lc if requested is loaded from Antares to calculate my own features (I don't store the light curve)
-		#- Antares properties if requested are loaded from Antares
-		#- plots are done from Antares db
-		#- crossmatches: show whch cross-matches, and then when clicking down show the details with mag, maybe image
-		#- add in information for follow-up, like from the caltech software
-
-
-		#works like that:
-		#- gets alerts
-		#- stores them (without lc)
-		#- if features change: retrieve lc from database
-
-
-
-					#lightcurve:
-					#['time', 'alert_id', 'ant_mjd', 'ant_survey', 'ant_ra', 'ant_dec', 'ant_passband', 'ant_mag', 'ant_magerr', 'ant_maglim', 'ant_mag_corrected', 'ant_magerr_corrected', 'ant_magulim_corrected', 'ant_magllim_corrected']
-
-					
-					# this is the time series - works:
-					#print('timeseries:')
-					#print(list(locus.timeseries))
-					#print(locus.timeseries)
-					
-					# these are the features - works:
-					# features
-					#print('features:')
-					#print(locus.properties)
-					#https://antares.noirlab.edu/properties
-					#ant_* are normalized
-					
-					# these are the cross-matches - works:
-					# cross-matches
-					#catalog_objects (Optional[List[dict]])
-					#A list of catalog objects that are associated with this locus. 
-					#If None, they will be loaded on first access from the ANTARES HTTP API.
-					
-					#print('cross-matches:')
-					#print(locus.catalog_objects)
-					
-					# plot - works:
-					#plot_lightcurve(locus_id,locus.lightcurve,'testplots')
-					
-					
-					
-
-			#locus_id (str) – ANTARES ID for this object.
-
-			#ra (float) – Right ascension of the centroid of alert history.
-
-			#dec (float) – Declination of the centroid of alert history.
-
-			#properties (dict) – A dictionary of ANTARES- and user-generated properties that are updated every time there is activity on this locus (e.g. a new alert).
-
-			#tags (List[str]) – A list of strings that are added to this locus by ANTARES- and user-submitted filters that run against the real-time alert stream.
-
-			#alerts (Optional[List[Alert]]) – A list of alerts that are associated with this locus. If None, the alerts will be loaded on first access from the ANTARES HTTP API.
-
-			#catalogs (Optional[List[str]]) – Names of catalogs that this locus has been associated with.
-
-			#catalog_objects (Optional[List[dict]]) – A list of catalog objects that are associated with this locus. If None, they will be loaded on first access from the ANTARES HTTP API.
-
-			#lightcurve (Optional[pd.DataFrame]) – Data frame representation of a subset of normalized alert properties. If None it will be loaded on first access from the ANTARES HTTP API.
-
-			#watch_list_ids (Optional[List[str]]) – A list of IDs corresponding to user-submitted regional watch lists.
-
-			#watch_object_ids (Optional[List[str]]) – A list of IDs corresponding to user-submitted regional watch list objects.
-
-			
-					
-					
-					
-					
-					
-					#
-		#When an alert exits the pipeline it has been flagged with catalog matches, 
-		#arbitrary new data properties generated by the filters, and stream associations. 
-					
-			
-
-			
-			#except:
-			#	print("no alerts")
-			#	pass
-			
-			
-			#except Exception as error:
-		# handle the exception
-				#print("An exception occurred:", error) 
-				#pass
-				
-	#finally:
-				#logging.info('finished processing alert archive')
-				
 				
 	f.close()
 	client.close()
 		
 	
 	dbconn.close()
-
-
-	#topic, locus = client.poll(timeout=10)
-	#if locus:
-		#print("received locus {} on topic {}".format(locus, topic))
-		
-		
-
-
-				
-		#print(locus.alerts)
-		#print(locus.lightcurve)
-		
-		
-		#alert_id = locus.alerts[0].alert_id
-		
-		#print('alert_id: ', alert_id)
-		
-		
-		#for i in range(0,len(locus.alerts)):
-		#	print(locus.alerts[i].mjd)
-				
-		
-		#this is the same to download without the ANTARES client:
-		# I can use this to maybe pull the lightcurve later
-		#lc = requests.get('https://api.antares.noirlab.edu/v1/loci/%s'%(locus.locus_id)).json()['data']['attributes']['lightcurve']
-		#ts = TimeSeries.read(lc, format='ascii.csv')
-		#print(ts)
-		
-		
-
-
-		# this is okay:	
-		
-		#print(locus.lightcurve)
-
-		
-		#print(locus.alerts[-1].mjd)  # this is the current alert that came in
-		
-		#for i in range(0,len(locus.alerts)):
-		#	print(locus.alerts[i].mjd)
-	 
-		
-	#else:
-		#print("waited 10 seconds but didn't get an alert")
 
 ############
 
@@ -2008,151 +1879,4 @@ if __name__ == "__main__":
 
 
 
-#### production version below - freeze 30 Oct, 2020
-#from statsmodels.stats.weightstats import DescrStatsW
-#import numpy as np
-#from astropy.table import MaskedColumn
-
-#class HighAmp_v2(dk.Filter):
-    #ERROR_SLACK_CHANNEL = None
-    
-    #INPUT_LOCUS_PROPERTIES = [
-        #'ztf_object_id',
-    #]
-
-    ### bare absolute minimum alert properties proving it's good to go
-    #INPUT_ALERT_PROPERTIES = [
-        #'ztf_fid',
-        #'ztf_magpsf',
-        #'ztf_sigmapsf',
-        #'ant_mjd',
-        #'ant_survey'
-    #]    
-    
-    
-    #OUTPUT_TAGS = [
-        #{
-            #'name': 'high_amplitude_transient_candidate',
-            #'description': 'Locus - a transient candidate - exhibits a high amplitude',
-        #},
-        #{
-            #'name': 'high_amplitude_variable_star_candidate',
-            #'description': 'Locus - a variable star candidate - exhibits a high amplitude',
-        #},
-    #]
-    
-    #def _is_var_star(self, df, match_radius_arcsec=1.5, star_galaxy_threshold=0.4):
-        #"""
-        #Returns a boolean indicating if the locus is a variable star.
-
-        #Parameters
-        #----------
-        #df : Astropy TimeSeries
-            #QTable with the properties of all the alerts/detections for the locus
-        #match_radius_arcsec : float, default 1.5
-            #Upper bound of matching radius (in arcsec) used to find the counterpart of the locus in PS1 and in the ZTF template    
-        #star_galaxy_threshold : float, 0.4
-            #Lower bound of star-galaxy score of the PS1 counterpart. Value closer to 1 indicates a star. 
-
-        #"""
-
-        ### NOTE: there are cases where there may be a ps1 nn but not on ZTF (duh, ps1 is deeper) so also using distnr
-        
-        #if isinstance(df['ztf_distnr'], MaskedColumn) == True:
-            #distnr = df['ztf_distnr'].filled(fill_value=np.nan).data
-        #else:
-            #distnr = df['ztf_distnr'].data
-            
-        #if isinstance(df['ztf_distpsnr1'], MaskedColumn) == True:
-            #distpsnr1 = df['ztf_distpsnr1'].filled(fill_value=np.nan).data
-        #else:
-            #distpsnr1 = df['ztf_distpsnr1'].data
-
-        #if isinstance(df['ztf_sgscore1'], MaskedColumn) == True:
-            #sgscore = df['ztf_sgscore1'].filled(fill_value=np.nan).data
-        #else:
-            #sgscore = df['ztf_sgscore1'].data
-            
-        #return np.median(distpsnr1[np.isfinite(distpsnr1)]) < match_radius_arcsec \
-            #and np.median(distnr[np.isfinite(distnr)]) < match_radius_arcsec \
-            #and np.median(sgscore[np.isfinite(sgscore)]) > star_galaxy_threshold    
-    
-
-
-    #def run(self, locus):
-        #if locus.alert.properties['ant_survey'] != 1: #be sure we aren't triggered with upper limits
-            #print ("up lim")
-            #return 
-        
-        #threshold = 0.5  # in magnitude unit, and same for all filters
-        #fid = locus.alert.properties['ztf_fid']
-
-        #df = locus.timeseries
-        
-        #mask = (df['ztf_fid'] == fid) & (df['ant_survey'] == 1) #expect both columns to be unmasked
-        #df = df[mask]  
-        
-        
-        #if len(df) < 2: # Locus has < 2 measurements with fid matching the current alert fid.
-            #print ('too few points')
-            #return
-
-        #corrected = False
-        #mag = df['ztf_magpsf'].data #expect unmasked
-        #magerr = df['ztf_sigmapsf'].data #expect unmasked
-        
-        #if isinstance(df['ant_mag_corrected'], MaskedColumn) == False:
-            #corrected = True
-            #mag = df['ant_mag_corrected'].data 
-            #magerr = df['ant_magerr_corrected'].data 
-        #else:
-            #if np.sum(df['ant_mag_corrected'].mask) < len(df):
-                #corrected = True
-                
-                #mag = df['ant_mag_corrected'].filled(fill_value=np.nan).data 
-                #mm = np.isfinite(mag)
-                #mag = mag[mm]
-                
-                #magerr = df['ant_magerr_corrected'].filled(fill_value=np.nan).data
-                #mm = np.isfinite(magerr)
-                #magerr = magerr[mm]
-                        
-        
-        #is_var_star = self._is_var_star(df) ## only one filter type passed
-
-        #if is_var_star == True and corrected == True:
-            #tag = 'high_amplitude_variable_star_candidate'
-        #if is_var_star == True and corrected == False:  #if uncorrected but var_star, we skip
-            #return 
-        #if is_var_star == False:
-            #tag = 'high_amplitude_transient_candidate'
-
-        #alert_id = locus.alert.alert_id  # current alert_id
-        #ztf_object_id = locus.properties['ztf_object_id']  # ZTF Object ID
-        
-        #W = 1.0 / magerr ** 2.0
-        #des = DescrStatsW(mag, weights=W)
-        ##print (is_var_star, corrected, des.std, des.mean, tag)
-        
-        #if des.std > threshold:
-            ##print (f'hit!!! {tag} {alert_id} {ztf_object_id}')
-            #locus.tag(tag)
-            
-            
-            
-            
-#Output
-
-#When an alert exits the pipeline it has been flagged with catalog matches, 
-#arbitrary new data properties generated by the filters, and stream associations. 
-#At this point we check alerts for association with user-submitted watched 
-#objects, and send Slack notifications accordingly.
-
-#Finally, we output the alert to Kafka streams if it was associated with a 
-#stream. Downstream systems and users connect to the streams in real-time using 
-#the ANTARES client library.             
-            
-            
-            
-            
             
