@@ -214,7 +214,7 @@ def classify(alert_id):
 	harmonics_mag_5_i,harmonics_mag_6_g,harmonics_mag_6_R,harmonics_mag_6_i,harmonics_mag_7_g,harmonics_mag_7_R,harmonics_mag_7_i,\
 	harmonics_phi_1_g,harmonics_phi_1_R,harmonics_phi_1_i,harmonics_phi_2_g,harmonics_phi_2_R,harmonics_phi_2_i,harmonics_phi_3_g,harmonics_phi_3_R,\
 	harmonics_phi_3_i,harmonics_phi_4_g,harmonics_phi_4_R,harmonics_phi_4_i,harmonics_phi_5_g,harmonics_phi_5_R,harmonics_phi_5_i,\
-	harmonics_phi_6_g,harmonics_phi_6_R,harmonics_phi_6_i,harmonics_phi_7_g,harmonics_phi_7_R,harmonics_phi_7_i,harmonics_mse_g,\
+	harmonics_phi_6_g,harmonics_phi_6_R,harmonics_phi_6_i,harmonics_mse_g,\
 	harmonics_mse_R,harmonics_mse_i,harmonics_chi_per_degree_g,harmonics_chi_per_degree_R,harmonics_chi_per_degree_i\
 	from featuretable where alert_id = '%s'"%(alert_id)
 	
@@ -250,6 +250,21 @@ def classify(alert_id):
 	
 	
 	chunk_featuretable = chunk_featuretable.drop(columns=['locus_id', 'date_alert_mjd','alert_id'])
+	
+	
+	chunk_featuretable = chunk_featuretable.drop(columns=['harmonics_mag_1_g','harmonics_mag_1_R','harmonics_mag_1_i',
+					 'harmonics_mag_2_g','harmonics_mag_2_R','harmonics_mag_2_i','harmonics_mag_3_g',
+					 'harmonics_mag_3_R','harmonics_mag_3_i','harmonics_mag_4_g','harmonics_mag_4_R',
+					 'harmonics_mag_4_i','harmonics_mag_5_g','harmonics_mag_5_R','harmonics_mag_5_i',
+					 'harmonics_mag_6_g','harmonics_mag_6_R','harmonics_mag_6_i','harmonics_mag_7_g',
+					 'harmonics_mag_7_R','harmonics_mag_7_i','harmonics_phi_1_g','harmonics_phi_1_R',
+					 'harmonics_phi_1_i','harmonics_phi_2_g','harmonics_phi_2_R','harmonics_phi_2_i',
+					 'harmonics_phi_3_g','harmonics_phi_3_R','harmonics_phi_3_i','harmonics_phi_4_g',
+					 'harmonics_phi_4_R','harmonics_phi_4_i','harmonics_phi_5_g','harmonics_phi_5_R',
+					 'harmonics_phi_5_i','harmonics_phi_6_g','harmonics_phi_6_R','harmonics_phi_6_i',
+					 'harmonics_mse_g',
+					 'harmonics_mse_R','harmonics_mse_i','harmonics_chi_per_degree_g','harmonics_chi_per_degree_R',
+					 'harmonics_chi_per_degree_i'])
 			
 	chunk_featuretable = chunk_featuretable.replace(['Inlier', 'Outlier', 'TBD'],[0, 1,np.nan])
 
@@ -262,21 +277,59 @@ def classify(alert_id):
 				
 
 			
-	scaler = StandardScaler()
-			
-	X = scaler.fit_transform(X)
 			
 	predicted_labels = trained_classifier.predict(X)
 			
 	p_class = trained_classifier.predict_proba(X)
 	prob_class_idx =  np.argmax(p_class[0])
 	
-# 	print('********** test classification*******')
-# 	
-# 	print('p_class')
-# 	print(p_class)
-# 	print('max(p_class[0])')
-# 	print(max(p_class[0]))
+	
+####### from development:
+
+
+# 
+# 
+# 		alertinfo = chunk_featuretable[['locus_id','date_alert_mjd','alert_id']]
+# 
+# 			
+# 			chunk_featuretable = chunk_featuretable.drop(columns=['locus_id', 'date_alert_mjd','alert_id'])
+# 			
+# 			chunk_featuretable = chunk_featuretable.replace(['Inlier', 'Outlier', 'TBD'],[0, 1,np.nan])
+# 
+# 			chunk_featuretable = chunk_featuretable.replace(['Pass', 'Fail'],[0, 1])
+# 			
+# 			#print(chunk_featuretable)
+# 
+# 			# #Splitting the data into independent and dependent variables
+# 			X = chunk_featuretable.values
+# 				
+# 			#print(X)
+# 			
+# 			scaler = StandardScaler()
+# 			
+# 			X = scaler.fit_transform(X)
+# 			
+# 			predicted_labels = trained_classifier.predict(X)
+# 			
+# 			p_class = trained_classifier.predict_proba(X)
+# 			
+##############			
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	#print('********** test classification*******')
+	
+	#print('p_class')
+	#print(p_class)
+	#print('max(p_class[0])')
+	#print(max(p_class[0]))
 # 	
 # 	
 # 	#the label of the most probable class
@@ -400,7 +453,6 @@ def calculate_features_one_lc(param):
 	harmonics_phi_4 = {'g': np.NaN, 'R': np.NaN, 'i': np.NaN}
 	harmonics_phi_5 = {'g': np.NaN, 'R': np.NaN, 'i': np.NaN}
 	harmonics_phi_6 = {'g': np.NaN, 'R': np.NaN, 'i': np.NaN}
-	harmonics_phi_7 = {'g': np.NaN, 'R': np.NaN, 'i': np.NaN}
 
 	harmonics_mse = {'g': np.NaN, 'R': np.NaN, 'i': np.NaN}
 	harmonics_chi_per_degree = {'g': np.NaN, 'R': np.NaN, 'i': np.NaN}
@@ -1264,7 +1316,6 @@ def calculate_features_one_lc(param):
 							harmonics_phi_4[band] = coef_phi[3]
 							harmonics_phi_5[band] = coef_phi[4]
 							harmonics_phi_6[band] = coef_phi[5]
-							harmonics_phi_7[band] = coef_phi[6]
 							
 							harmonics_mse[band] = mse 
 							harmonics_chi_per_degree[band] = chi_per_degree 
@@ -1286,7 +1337,6 @@ def calculate_features_one_lc(param):
 							harmonics_phi_4[band] = np.NaN
 							harmonics_phi_5[band] = np.NaN
 							harmonics_phi_6[band] = np.NaN
-							harmonics_phi_7[band] = np.NaN
 							
 							harmonics_mse[band] = np.NaN 
 							harmonics_chi_per_degree[band] = np.NaN
@@ -1332,7 +1382,7 @@ def calculate_features_one_lc(param):
 						harmonics_phi_4['g'], harmonics_phi_4['R'], 
 						harmonics_phi_4['i'], harmonics_phi_5['g'], harmonics_phi_5['R'], 
 						harmonics_phi_5['i'], harmonics_phi_6['g'], harmonics_phi_6['R'], harmonics_phi_6['i'], 
-						harmonics_phi_7['g'], harmonics_phi_7['R'], harmonics_phi_7['i'], harmonics_mse['g'], 
+						harmonics_mse['g'], 
 						harmonics_mse['R'], harmonics_mse['i'], harmonics_chi_per_degree['g'], harmonics_chi_per_degree['R'], 
 						harmonics_chi_per_degree['i'], locus_id,writeflag]
 	
@@ -1399,10 +1449,13 @@ def process_single_alert(param):
 					#print(features)
 
 					#print('write featuretable DB')
-					print(alert_id)
+					#print(alert_id)
 					
 					### write external classification information to database
-					c.execute("insert or ignore into featuretable values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",(
+					
+
+					
+					c.execute("insert or ignore into featuretable values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",(
 					logdate, alert_id, locus_id, locus.ra, locus.dec, locus.alerts[-1].mjd, locus.properties.get("ztf_object_id"),
 					locus.properties.get("num_alerts"), locus.properties.get("num_mag_values"), locus.properties.get("brightest_alert_id"),         
 					locus.properties.get("brightest_alert_magnitude"), locus.properties.get("brightest_alert_observation_time"),
@@ -1474,7 +1527,7 @@ def process_single_alert(param):
 					features[136], features[137], features[138], features[139], features[140], features[141], features[142], 
 					features[143], features[144], features[145], features[146],
 					features[147], features[148], features[149], features[150], 
-					features[151], features[152], features[153], features[154], features[155],  features[156]) )
+					features[151], features[152], features[153]) )
 									
 									
 					dbconn.commit()							
